@@ -33,3 +33,7 @@ On Windows, choose **More info → Run anyway** in SmartScreen.
 
 This is an independent project and is not affiliated with or endorsed by WhatsApp or Meta.
 It simply loads the official WhatsApp Web (https://web.whatsapp.com) in separate sessions.
+
+## License
+
+[MIT](LICENSE)

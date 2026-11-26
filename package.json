@@ -3,6 +3,8 @@
   "productName": "Multi WhatsApp",
   "version": "1.0.0",
   "description": "Run several WhatsApp accounts side by side on Mac and Windows",
+  "license": "MIT",
+  "author": "Yehia Elassouli",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
