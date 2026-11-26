@@ -506,6 +506,10 @@ themeBtn.onclick = () => {
 };
 window.api.on('theme', showTheme);
 
+// Enter in the dialog presses the main button (Add / Save / Remove): Cancel
+// is a plain button, so it is not the form's default. Esc still cancels.
+document.getElementById('dlg-cancel').onclick = () => dlg.close('cancel');
+
 document.getElementById('add').onclick = addAccount;
 window.api.on('add-account', addAccount);
 window.api.on('switch-index', (i) => accounts[i] && activate(accounts[i].id));
