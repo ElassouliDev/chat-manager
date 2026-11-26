@@ -2,7 +2,7 @@
 
 # Chat Manager
 
-A desktop app (Mac and Windows) that runs several **WhatsApp** and **Telegram** accounts at the same time.
+A desktop app (Mac and Windows) that runs several **WhatsApp**, **Telegram**, and **Microsoft Teams** accounts at the same time.
 Each account runs in its own isolated web session, so logins never mix.
 
 ## Run it
@@ -15,9 +15,10 @@ npm start
 
 ## Use it
 
-- **+** in the sidebar (or Cmd/Ctrl+N) adds an account. Pick **WhatsApp** or **Telegram**, then scan the QR code with that account's phone:
+- **+** in the sidebar (or Cmd/Ctrl+N) adds an account. Pick **WhatsApp**, **Telegram**, or **Teams**, then sign in:
   - WhatsApp: **Linked devices → Link a device**
   - Telegram: **Settings → Devices → Add Device** (or log in with your phone number)
+  - Teams: your Microsoft work, school, or personal account. Company sign-in pages open inside the app. The first start can take up to a minute while Teams loads.
 - Click an icon, or press Cmd/Ctrl+1 to 9, to switch accounts. A small marker on each icon shows which service it is.
 - Badges show unread counts per account; the total appears on the Dock/taskbar and in the tray.
 - Clicking a desktop notification jumps to the right account.
@@ -48,8 +49,8 @@ On Windows, choose **More info → Run anyway** in SmartScreen.
 
 ## Disclaimer
 
-This is an independent project and is not affiliated with or endorsed by WhatsApp, Meta, or Telegram.
-It loads the official web apps (https://web.whatsapp.com and https://web.telegram.org) in separate sessions.
+This is an independent project and is not affiliated with or endorsed by WhatsApp, Meta, Telegram, or Microsoft.
+It loads the official web apps (https://web.whatsapp.com, https://web.telegram.org, and https://teams.microsoft.com) in separate sessions.
 
 ## License
 

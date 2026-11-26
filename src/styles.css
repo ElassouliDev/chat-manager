@@ -103,7 +103,7 @@ body { display: flex; }
 .menu-note { padding: 6px 16px 4px; font-size: 12px; color: var(--muted); }
 .danger { color: var(--danger) !important; }
 
-dialog { background: var(--side); color: var(--text); border: none; border-radius: 10px; padding: 22px; width: 340px;
+dialog { background: var(--side); color: var(--text); border: none; border-radius: 10px; padding: 22px; width: 400px; max-width: calc(100vw - 32px);
   box-shadow: 0 12px 32px var(--shadow); }
 dialog::backdrop { background: var(--backdrop); }
 dialog h3 { margin: 0 0 10px; font-weight: 600; }
@@ -122,8 +122,8 @@ dialog p:empty { display: none; }
 .dlg-actions .primary.danger-btn { background: var(--danger); color: #fff; }
 
 /* service picker in the Add account dialog */
-#dlg-services { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-#dlg-services button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;
+#dlg-services { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+#dlg-services button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; min-width: 0;
   border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--text);
   font-size: 14px; font-weight: 600; cursor: pointer; }
 #dlg-services button svg { width: 20px; height: 20px; color: var(--svc); }

@@ -1,8 +1,8 @@
 {
   "name": "chat-manager",
   "productName": "Chat Manager",
-  "version": "1.3.0",
-  "description": "WhatsApp and Telegram accounts side by side in one desktop app for Mac and Windows",
+  "version": "1.4.0",
+  "description": "WhatsApp, Telegram and Microsoft Teams accounts side by side in one desktop app for Mac and Windows",
   "license": "MIT",
   "author": "Yehia Elassouli",
   "main": "src/main.js",
@@ -32,8 +32,8 @@
       "icon": "build/icon.png",
       "artifactName": "Chat-Manager-${version}-${arch}.${ext}",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Chat Manager needs the microphone for WhatsApp and Telegram calls.",
-        "NSCameraUsageDescription": "Chat Manager needs the camera for WhatsApp and Telegram video calls."
+        "NSMicrophoneUsageDescription": "Chat Manager needs the microphone for WhatsApp, Telegram and Teams calls.",
+        "NSCameraUsageDescription": "Chat Manager needs the camera for WhatsApp, Telegram and Teams video calls."
       }
     },
     "win": {

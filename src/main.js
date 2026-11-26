@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, nativeTheme, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -54,11 +54,13 @@ const CHROME_UA = `Mozilla/5.0 (${osPart}) AppleWebKit/537.36 (KHTML, like Gecko
 app.userAgentFallback = CHROME_UA;
 
 // Pages that stay inside the app; any other link opens in the browser.
+// WhatsApp and Telegram pages; other links they open go to the browser.
 const IN_APP_HOSTS = new Set(['web.whatsapp.com', 'web.telegram.org']);
 
 // What the chat pages may use: notifications, and microphone/camera for calls.
 const ALLOWED_PERMISSIONS = new Set([
   'notifications', 'media', 'mediaKeySystem', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen', 'speaker-selection',
+  'display-capture',
 ]);
 
 // ---------- stored data ----------
@@ -136,6 +138,20 @@ function configurePartition(partition) {
   ses.setUserAgent(CHROME_UA);
   ses.setPermissionRequestHandler((_wc, permission, cb) => cb(ALLOWED_PERMISSIONS.has(permission)));
   ses.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission));
+  // Screen sharing in calls. On macOS 15+ the system picker lets you choose a
+  // window or screen; elsewhere the main screen is shared.
+  ses.setDisplayMediaRequestHandler(
+    (_request, callback) => {
+      desktopCapturer
+        .getSources({ types: ['screen'] })
+        .then((sources) => {
+          if (!sources.length) return callback({});
+          callback(IS_WIN ? { video: sources[0], audio: 'loopback' } : { video: sources[0] });
+        })
+        .catch(() => callback({}));
+    },
+    { useSystemPicker: true },
+  );
 }
 
 function createWindow() {
@@ -273,13 +289,22 @@ function updateTray() {
 }
 
 // ---------- chat pages ----------
-function isInApp(url) {
+const hostOf = (url) => {
   try {
-    return IN_APP_HOSTS.has(new URL(url).host);
+    return new URL(url).host;
   } catch {
-    return false;
+    return '';
   }
-}
+};
+const isInApp = (url) => IN_APP_HOSTS.has(hostOf(url));
+
+// Microsoft sign-in can open a small popup window; those stay inside the app
+// (and in the account's own session) instead of going to the browser.
+const SIGN_IN_POPUP_HOSTS = [
+  'login.microsoftonline.com', 'login.microsoft.com', 'login.live.com', 'account.live.com',
+  'teams.microsoft.com', 'teams.cloud.microsoft', 'teams.live.com',
+];
+const isSignInPopup = (url) => url === 'about:blank' || SIGN_IN_POPUP_HOSTS.some((h) => hostOf(url) === h || hostOf(url).endsWith('.' + h));
 
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() === 'window') {
@@ -292,13 +317,25 @@ app.on('web-contents-created', (_e, contents) => {
     return;
   }
   if (contents.getType() !== 'webview') return;
+
   // Links clicked inside a chat open in the default browser.
   contents.setWindowOpenHandler(({ url }) => {
+    const fromWhatsAppOrTelegram = isInApp(contents.getURL());
+    if (!fromWhatsAppOrTelegram && isSignInPopup(url)) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: { width: 520, height: 720, autoHideMenuBar: true, parent: win || undefined },
+      };
+    }
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  // WhatsApp and Telegram never leave their own site, so any other page they
+  // navigate to opens in the browser. Teams signs in through Microsoft's pages
+  // and often a company's own login page, so it may go anywhere.
   contents.on('will-navigate', (ev, url) => {
-    if (!isInApp(url)) {
+    if (isInApp(contents.getURL()) && !isInApp(url)) {
       ev.preventDefault();
       if (/^https?:/.test(url)) shell.openExternal(url);
     }
