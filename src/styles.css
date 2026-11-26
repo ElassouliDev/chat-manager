@@ -129,3 +129,10 @@ dialog p:empty { display: none; }
   font-size: 14px; font-weight: 600; cursor: pointer; }
 #dlg-services button svg { width: 20px; height: 20px; color: var(--svc); }
 #dlg-services button.sel { border-color: var(--svc); background: color-mix(in srgb, var(--svc) 14%, var(--bg)); }
+
+/* drag to reorder */
+.tab.dragging { opacity: .3; }
+.tab.drop-before::after, .tab.drop-after::after { content: ""; position: absolute; left: 2px; right: 2px; height: 3px;
+  border-radius: 2px; background: var(--accent); pointer-events: none; }
+.tab.drop-before::after { top: -7px; }
+.tab.drop-after::after { bottom: -7px; }

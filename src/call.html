@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Incoming call</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --card: #202c33; --text: #e9edef; --muted: #8696a0; --line: #0b141a;
+      --answer: #25d366; --decline: #f15c6d; --chip: #3b4a54;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --card: #ffffff; --text: #111b21; --muted: #667781; --line: #d1d7db;
+        --answer: #1daa61; --decline: #ea0038; --chip: #e9edef;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); user-select: none; }
+    .card { position: absolute; inset: 6px; border-radius: 14px; background: var(--card); border: 1px solid var(--line);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .35); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 12px;
+      -webkit-app-region: drag; animation: in .18s ease-out; }
+    @keyframes in { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
+    @media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+    .top { display: flex; align-items: center; gap: 12px; cursor: pointer; -webkit-app-region: no-drag; }
+    .avatar { position: relative; flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+      color: #fff; font-weight: 600; font-size: 17px; }
+    .avatar::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--answer);
+      opacity: 0; animation: ring 1.6s ease-out infinite; }
+    @keyframes ring { 0% { opacity: .9; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.25); } }
+    @media (prefers-reduced-motion: reduce) { .avatar::before { animation: none; opacity: .6; } }
+    .kind { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; display: grid;
+      place-items: center; color: #fff; border: 2px solid var(--card); }
+    .kind svg { width: 12px; height: 12px; }
+    .who { min-width: 0; flex: 1; }
+    .caller { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .what { margin-top: 3px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .close { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none; border-radius: 50%;
+      background: none; color: var(--muted); font-size: 16px; line-height: 20px; cursor: pointer; -webkit-app-region: no-drag; }
+    .close:hover { background: var(--chip); color: var(--text); }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; -webkit-app-region: no-drag; }
+    .actions button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border: none;
+      border-radius: 18px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .actions button svg { width: 18px; height: 18px; }
+    .actions button:active { transform: scale(.97); }
+    .decline { background: var(--decline); }
+    .decline svg { transform: rotate(135deg); }
+    .answer { background: var(--answer); }
+    button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="card" role="alertdialog" aria-labelledby="caller" aria-describedby="what">
+    <button class="close" id="dismiss" title="Hide (the call keeps ringing in the app)" aria-label="Hide">×</button>
+    <div class="top" id="open" title="Open this account">
+      <div class="avatar" id="avatar"><span id="initials"></span><span class="kind" id="kind"></span></div>
+      <div class="who">
+        <div class="caller" id="caller"></div>
+        <div class="what" id="what"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="decline" id="decline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2Z"/></svg>Decline</button>
+      <button class="answer" id="answer"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2Z"/></svg>Answer</button>
+    </div>
+  </div>
+  <script src="services.js"></script>
+  <script src="call.js"></script>
+</body>
+</html>

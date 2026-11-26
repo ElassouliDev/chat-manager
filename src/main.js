@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, nativeTheme, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, nativeTheme, desktopCapturer, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -313,10 +313,11 @@ function staysInApp(svc, url) {
 
 // Sign-in popups ("Continue with Google", Microsoft login) open in a small
 // window inside the app, in the account's own session.
-function isSignInPopup(svc, url) {
-  if (url === 'about:blank') return Boolean(svc && svc.sso);
-  return onHost(url, SIGN_IN_HOSTS) || (svc && svc.sso && onHost(url, svc.hosts || []));
-}
+const isSignInPopup = (url) => onHost(url, SIGN_IN_HOSTS);
+
+// A service's own windows (call windows such as Messenger's, "open in new
+// window" for a mail or chat) also stay inside the app, in the same session.
+const isOwnWindow = (svc, url) => url === 'about:blank' || Boolean(svc && onHost(url, svc.hosts || []));
 
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() === 'window') {
@@ -326,18 +327,24 @@ app.on('web-contents-created', (_e, contents) => {
       webPreferences.nodeIntegration = false;
       webPreferences.contextIsolation = true;
     });
+    // Windows opened from a chat (sign-in, calls) send further links to the browser.
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:/.test(url)) shell.openExternal(url);
+      return { action: 'deny' };
+    });
     return;
   }
   if (contents.getType() !== 'webview') return;
   const svc = () => serviceBySession.get(contents.session);
 
-  // Links that open a new window go to the default browser, except sign-in popups.
+  // Links that open a new window go to the default browser, except sign-in
+  // popups and the service's own windows (calls, pop-outs).
   contents.setWindowOpenHandler(({ url }) => {
-    if (isSignInPopup(svc(), url)) {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: { width: 520, height: 720, autoHideMenuBar: true, parent: win || undefined },
-      };
+    if (isSignInPopup(url)) {
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 520, height: 720, autoHideMenuBar: true } };
+    }
+    if (isOwnWindow(svc(), url)) {
+      return { action: 'allow', overrideBrowserWindowOptions: { width: 1000, height: 720, autoHideMenuBar: true } };
     }
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: 'deny' };
@@ -393,11 +400,88 @@ ipcMain.on('badge:set', (_e, next) => {
 ipcMain.on('window:focus', () => showWindow());
 ipcMain.on('theme:set', (_e, theme) => setTheme(theme));
 
-// An account is ringing: bring the app forward on that account, even from the tray.
-ipcMain.on('call:incoming', () => {
-  showWindow({ steal: true });
+// ---------- incoming-call popup ----------
+// A small always-on-top window in the corner of the screen, like the WhatsApp
+// and Telegram desktop apps. It appears without taking focus, even while the
+// main window is hidden in the tray.
+const CALL_POPUP = { width: 372, height: 162, margin: 12, timeoutMs: 60 * 1000 };
+let callWin = null;
+let currentCall = null;
+let callTimer = null;
+
+function placeCallPopup() {
+  const { workArea } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const x = workArea.x + workArea.width - CALL_POPUP.width - CALL_POPUP.margin;
+  // Top-right on Mac (below the menu bar), bottom-right on Windows (above the taskbar).
+  const y = IS_MAC ? workArea.y + CALL_POPUP.margin : workArea.y + workArea.height - CALL_POPUP.height - CALL_POPUP.margin;
+  callWin.setBounds({ x, y, width: CALL_POPUP.width, height: CALL_POPUP.height });
+}
+
+function showCallPopup(info) {
+  currentCall = info;
+  if (!callWin || callWin.isDestroyed()) {
+    callWin = new BrowserWindow({
+      // On macOS a "panel" floats without waking the app, so a hidden main
+      // window stays hidden while the popup shows.
+      ...(IS_MAC ? { type: 'panel' } : {}),
+      width: CALL_POPUP.width,
+      height: CALL_POPUP.height,
+      show: false,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      title: 'Incoming call',
+      webPreferences: { preload: path.join(__dirname, 'call-preload.js'), contextIsolation: true, nodeIntegration: false },
+    });
+    callWin.setAlwaysOnTop(true, 'screen-saver');
+    if (IS_MAC) callWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    callWin.on('closed', () => {
+      callWin = null;
+    });
+    callWin.loadFile(path.join(__dirname, 'call.html'));
+  }
+  placeCallPopup();
+  const deliver = () => callWin && !callWin.isDestroyed() && callWin.webContents.send('call:show', info);
+  if (callWin.webContents.isLoading()) callWin.webContents.once('did-finish-load', deliver);
+  else deliver();
+  callWin.showInactive();
   if (IS_MAC) app.dock.bounce('critical');
   if (IS_WIN && win) win.flashFrame(true);
+  clearTimeout(callTimer);
+  callTimer = setTimeout(hideCallPopup, CALL_POPUP.timeoutMs);
+}
+
+function hideCallPopup() {
+  clearTimeout(callTimer);
+  currentCall = null;
+  if (callWin && !callWin.isDestroyed()) callWin.hide();
+}
+
+// An account is ringing.
+ipcMain.on('call:incoming', (_e, info) => showCallPopup(info));
+
+// The service closed its call notification (answered, declined or missed).
+ipcMain.on('call:ended', (_e, accountId) => {
+  if (currentCall && currentCall.accountId === accountId) hideCallPopup();
+});
+
+// Buttons in the popup.
+ipcMain.on('call:action', (_e, action) => {
+  const call = currentCall;
+  hideCallPopup();
+  if (!call) return;
+  if (action === 'answer' || action === 'open') {
+    showWindow({ steal: true });
+    send('call-action', { accountId: call.accountId, action });
+  } else if (action === 'decline') {
+    send('call-action', { accountId: call.accountId, action });
+  }
 });
 
 // ---------- app lifecycle ----------

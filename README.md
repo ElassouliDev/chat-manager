@@ -25,6 +25,7 @@ npm start
   - Outlook: your Microsoft work, school, or personal account (Outlook.com, Hotmail, Live).
   - Links to other websites open in your normal browser.
 - Click an icon, or press Cmd/Ctrl+1 to 9, to switch accounts. A small marker on each icon shows which service it is.
+- **Drag an icon** up or down to reorder the sidebar (or right-click → Move up / down / to top / to bottom).
 - Badges show unread counts per account; the total appears on the Dock/taskbar and in the tray.
 - Clicking a desktop notification jumps to the right account.
 - Hover an icon and click **×** to remove (log out) that account.
@@ -36,7 +37,7 @@ npm start
 ### Runs in the background
 
 - Closing the window keeps Chat Manager running in the tray (Windows) or menu bar (Mac), so notifications and calls still arrive. Quit from the tray menu, **Cmd+Q** on Mac, or **Ctrl+Q** on Windows.
-- An incoming call brings the window to the front on the account that's ringing, even when it's hidden.
+- An incoming call shows a **call popup** in the corner of the screen, like the WhatsApp and Telegram desktop apps, even while Chat Manager is hidden. **Answer** opens the account and accepts the call; **Decline** rejects it without opening the app; clicking the caller opens the account; **×** hides the popup while the call keeps ringing. Call windows that a service opens separately (for example Messenger calls) stay inside the app.
 - Turn on **Open at login** in the tray menu to start Chat Manager quietly in the background when you sign in.
 
 Upgrading from **Multi WhatsApp**: your accounts and logins are carried over automatically on first launch.

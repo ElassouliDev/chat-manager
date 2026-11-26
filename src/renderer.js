@@ -149,7 +149,7 @@ function renderTabs() {
     b.setAttribute('role', 'button');
     b.tabIndex = 0;
     b.style.background = acc.color;
-    b.title = `${acc.name} · ${serviceName(acc)}  (${mod}${i + 1})${muted ? '\n' + mutedLabel(acc) : ''}`;
+    b.title = `${acc.name} · ${serviceName(acc)}  (${mod}${i + 1})${muted ? '\n' + mutedLabel(acc) : ''}\nDrag to reorder`;
     b.append(initials(acc.name));
 
     const kind = document.createElement('span');
@@ -185,6 +185,7 @@ function renderTabs() {
     b.onclick = () => activate(acc.id);
     b.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') activate(acc.id); };
     b.oncontextmenu = (e) => openMenu(e, acc.id);
+    makeDraggable(b, acc.id);
     tabsEl.appendChild(b);
   });
 
@@ -201,6 +202,67 @@ function renderTabs() {
       id: a.id, name: a.name, label: serviceName(a), unread: unread[a.id] || 0, muted: isMuted(a),
     })),
   });
+}
+
+// ---------- drag to reorder ----------
+let draggingId = null;
+
+function clearDropMarks() {
+  tabsEl.querySelectorAll('.drop-before, .drop-after').forEach((t) => t.classList.remove('drop-before', 'drop-after'));
+}
+
+function makeDraggable(tab, id) {
+  tab.draggable = true;
+  tab.addEventListener('dragstart', (e) => {
+    draggingId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => tab.classList.add('dragging'));
+  });
+  tab.addEventListener('dragend', () => {
+    draggingId = null;
+    tab.classList.remove('dragging');
+    clearDropMarks();
+  });
+  tab.addEventListener('dragover', (e) => {
+    if (!draggingId || draggingId === id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = tab.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    clearDropMarks();
+    tab.classList.add(after ? 'drop-after' : 'drop-before');
+  });
+  tab.addEventListener('drop', (e) => {
+    if (!draggingId || draggingId === id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    moveAccount(draggingId, id, tab.classList.contains('drop-after'));
+  });
+}
+
+// Dropping below the last icon moves the account to the end.
+tabsEl.addEventListener('dragover', (e) => {
+  if (!draggingId) return;
+  e.preventDefault();
+});
+tabsEl.addEventListener('drop', (e) => {
+  if (!draggingId || e.target !== tabsEl) return;
+  e.preventDefault();
+  moveAccount(draggingId, accounts[accounts.length - 1].id, true);
+});
+
+async function moveAccount(fromId, toId, after) {
+  const moving = accounts.find((a) => a.id === fromId);
+  if (!moving || fromId === toId) return;
+  const rest = accounts.filter((a) => a.id !== fromId);
+  const at = rest.findIndex((a) => a.id === toId);
+  rest.splice(after ? at + 1 : at, 0, moving);
+  accounts = rest;
+  draggingId = null;
+  clearDropMarks();
+  await persist();
+  renderTabs();
 }
 
 // Combine the title and app-badge counts: a real count wins over a dot.
@@ -262,8 +324,15 @@ function createView(acc) {
     } else if (e.channel === 'badge' && svc.unread.includes('badge')) {
       setUnread(acc.id, 'badge', e.args[0] || 0);
     } else if (e.channel === 'call') {
+      // Show the call popup; the app itself stays where it is until you answer.
+      const { title, body } = e.args[0] || {};
+      window.api.incomingCall({ accountId: acc.id, name: acc.name, color: acc.color, service: acc.service, title, body });
+    } else if (e.channel === 'call-ended') {
+      window.api.callEnded(acc.id);
+    } else if (e.channel === 'call-action-result' && !e.args[0]?.pressed) {
+      // The service's own Answer/Decline button wasn't found: show the call so you can handle it.
       activate(acc.id);
-      window.api.incomingCall();
+      window.api.focusWindow();
     }
   });
   viewsEl.appendChild(wv);
@@ -394,6 +463,8 @@ function openMenu(e, id) {
       renderTabs();
     }));
   }
+  if (idx > 0) items.push(menuButton('Move to top', () => moveAccount(acc.id, accounts[0].id, false)));
+  if (idx < accounts.length - 1) items.push(menuButton('Move to bottom', () => moveAccount(acc.id, accounts[accounts.length - 1].id, true)));
   items.push(document.createElement('hr'), menuButton('Remove & log out', () => removeAccount(acc.id), 'danger'));
   menuEl.replaceChildren(...items);
   menuEl.classList.remove('hidden');
@@ -439,6 +510,14 @@ document.getElementById('add').onclick = addAccount;
 window.api.on('add-account', addAccount);
 window.api.on('switch-index', (i) => accounts[i] && activate(accounts[i].id));
 window.api.on('switch-to', (id) => activate(id));
+// Answer / Decline / Open from the call popup.
+window.api.on('call-action', ({ accountId, action }) => {
+  if (!views[accountId]) return;
+  if (action === 'answer' || action === 'open') activate(accountId);
+  if (action === 'answer' || action === 'decline') {
+    try { views[accountId].send('chat-mgr:call-action', action); } catch {}
+  }
+});
 window.api.on('reload-current', () => activeId && views[activeId]?.reload());
 
 // ---------- boot ----------

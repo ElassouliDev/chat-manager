@@ -26,9 +26,12 @@ webFrame.executeJavaScript(`
       const o = opts || {};
       return CALL_RE.test(String(title || '') + ' ' + String(o.body || '')) || /^call_/.test(String(o.tag || ''));
     };
+    let callSeq = 0;
     const reportCall = (title, opts) => {
       ringingUntil = Date.now() + 60000;
-      post({ type: 'call', title: String(title || ''), body: String((opts && opts.body) || '') });
+      const id = ++callSeq;
+      post({ type: 'call', id, title: String(title || ''), body: String((opts && opts.body) || '') });
+      return id;
     };
 
     // Calls always get through; other notifications are dropped while muted.
@@ -47,10 +50,20 @@ webFrame.executeJavaScript(`
       class Wrapped extends Native {
         constructor(title, opts) {
           const call = isCall(title, opts);
-          if (call) reportCall(title, opts);
-          else if (muted) return standIn(title, opts);
+          const callId = call ? reportCall(title, opts) : 0;
+          if (!call && muted) return standIn(title, opts);
           super(title, opts);
           this.addEventListener('click', () => post({ type: 'notification-click' }));
+          if (call) {
+            // Services close the call notification when the call is answered,
+            // declined, or missed: that is our signal to close the call popup.
+            const close = this.close.bind(this);
+            this.close = () => {
+              ringingUntil = 0;
+              post({ type: 'call-ended', id: callId });
+              close();
+            };
+          }
         }
       }
       Object.defineProperty(Wrapped, 'permission', { get: () => Native.permission });
@@ -102,9 +115,46 @@ window.addEventListener('message', (e) => {
   if (!msg) return;
   if (msg.type === 'notification-click') ipcRenderer.sendToHost('notification-click');
   if (msg.type === 'badge') ipcRenderer.sendToHost('badge', Math.max(0, msg.count | 0));
-  if (msg.type === 'call') ipcRenderer.sendToHost('call', { title: msg.title, body: msg.body });
+  if (msg.type === 'call') ipcRenderer.sendToHost('call', { id: msg.id, title: msg.title, body: msg.body });
+  if (msg.type === 'call-ended') ipcRenderer.sendToHost('call-ended', { id: msg.id });
 });
 
 ipcRenderer.on('chat-mgr:muted', (_e, muted) => {
   window.postMessage({ __chatMgrHost: { muted: Boolean(muted) } }, '*');
+});
+
+// Answer or Decline from the call popup: press the service's own button.
+// Labels cover WhatsApp, Telegram, Teams, Messenger, Slack and Discord in
+// English and Arabic. If no button turns up within a few seconds, the window
+// shows the account so the call can be handled there.
+const CALL_BUTTONS = {
+  answer: /^(accept|answer|join|pick up|قبول|رد|الرد|انضمام)\b/i,
+  decline: /^(decline|reject|ignore|dismiss call|end call|hang up|رفض|تجاهل|إنهاء)\b/i,
+};
+
+function findCallButton(action) {
+  const re = CALL_BUTTONS[action];
+  const candidates = document.querySelectorAll('button, [role="button"]');
+  for (const el of candidates) {
+    const label = (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').trim();
+    if (re.test(label) && el.getClientRects().length > 0) return el;
+  }
+  return null;
+}
+
+ipcRenderer.on('chat-mgr:call-action', (_e, action) => {
+  if (!CALL_BUTTONS[action]) return;
+  const started = Date.now();
+  const tryPress = () => {
+    const el = findCallButton(action);
+    if (el) {
+      el.click();
+      ipcRenderer.sendToHost('call-action-result', { action, pressed: true });
+    } else if (Date.now() - started < 4000) {
+      setTimeout(tryPress, 250);
+    } else {
+      ipcRenderer.sendToHost('call-action-result', { action, pressed: false });
+    }
+  };
+  tryPress();
 });

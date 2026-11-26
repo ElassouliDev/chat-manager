@@ -6,10 +6,11 @@ contextBridge.exposeInMainWorld('api', {
   wipe: (id) => ipcRenderer.invoke('accounts:wipe', id),
   setBadge: (status) => ipcRenderer.send('badge:set', status),
   focusWindow: () => ipcRenderer.send('window:focus'),
-  incomingCall: () => ipcRenderer.send('call:incoming'),
+  incomingCall: (info) => ipcRenderer.send('call:incoming', info),
+  callEnded: (accountId) => ipcRenderer.send('call:ended', accountId),
   setTheme: (theme) => ipcRenderer.send('theme:set', theme),
   on: (channel, fn) => {
-    const allowed = ['switch-index', 'switch-to', 'add-account', 'reload-current', 'theme'];
+    const allowed = ['switch-index', 'switch-to', 'add-account', 'reload-current', 'theme', 'call-action'];
     if (allowed.includes(channel)) ipcRenderer.on(channel, (_e, ...args) => fn(...args));
   },
 });
