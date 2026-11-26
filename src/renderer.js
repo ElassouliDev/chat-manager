@@ -1,39 +1,5 @@
-// Each chat service the app can host. `unread` lists where its unread count
-// comes from: the page title ("(3) WhatsApp") and/or navigator.setAppBadge().
-const SERVICES = {
-  whatsapp: {
-    label: 'WhatsApp',
-    url: 'https://web.whatsapp.com/',
-    color: '#25D366',
-    unread: ['title'],
-    keeps: 'Your chats stay on your phone.',
-    hint: 'scan the QR code with that phone (WhatsApp → Linked devices).',
-    icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3Zm4.4 12.4c-.2.5-1.1 1-1.6 1-.4.1-.9.1-1.5-.1-.3-.1-.8-.3-1.4-.5-2.4-1-4-3.5-4.1-3.6-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.6-.3h.5c.1 0 .3 0 .5.4l.7 1.7c.1.1.1.3 0 .4l-.3.4-.3.3c-.1.1-.2.3-.1.5.2.3.7 1.1 1.4 1.7.9.8 1.7 1.1 2 1.2.2.1.4.1.5-.1l.6-.8c.2-.2.3-.2.5-.1l1.6.8c.2.1.4.2.4.3.1.1.1.6-.1 1.2Z"/></svg>',
-  },
-  telegram: {
-    label: 'Telegram',
-    url: 'https://web.telegram.org/a/',
-    color: '#2AABEE',
-    unread: ['badge'],
-    keeps: 'Your chats stay in your Telegram account.',
-    hint: 'scan the QR code in Telegram on your phone (Settings → Devices → Add Device), or log in with your phone number.',
-    icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21.4 4.3 2.9 11.4c-1.2.5-1.2 1.2-.2 1.5l4.7 1.5 1.8 5.6c.2.6.1.9.8.9.5 0 .7-.2 1-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.8-1.4-1.4ZM8.7 14.1l9.6-6.1c.5-.3.9-.1.5.2l-8 7.3-.3 3.4-1.8-4.8Z"/></svg>',
-  },
-  teams: {
-    label: 'Teams',
-    fullName: 'Microsoft Teams',
-    url: 'https://teams.microsoft.com/v2/',
-    color: '#5B5FC7',
-    // Teams puts "(3)" in the page title; newer builds may also set the app badge.
-    unread: ['title', 'badge'],
-    keeps: 'Your chats stay in your Microsoft account.',
-    // Teams' startup loader sometimes gives up on a cold start and leaves a blank page.
-    reloadOn: /Pre-loader startup failed/,
-    hint: 'sign in with your Microsoft work, school, or personal account.',
-    icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6.5A1.5 1.5 0 0 1 4.5 5h9A1.5 1.5 0 0 1 15 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 3 15.5v-9Zm3 2.2v1.6h2.2V15h1.6v-4.7H12V8.7H6Zm10 .3h3.5c.8 0 1.5.7 1.5 1.5v4a3.5 3.5 0 0 1-5 3.2V9Zm2-1.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-6-3a2.3 2.3 0 0 0-2.2 1.5H12c.4 0 .8.1 1.2.3A2.3 2.3 0 0 0 12 4.5Z"/></svg>',
-  },
-};
-const COLORS = ['#25D366', '#2AABEE', '#5B5FC7', '#F5A623', '#E94F64', '#1ABC9C', '#E67E22', '#607D8B'];
+// SERVICES and SIGN_IN_HOSTS come from services.js, loaded before this file.
+const COLORS = ['#25D366', '#2AABEE', '#5B5FC7', '#0A66C2', '#E1306C', '#F5A623', '#1ABC9C', '#607D8B'];
 const BELL_OFF = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 18.7 5.3 4 4 5.3l3 3V11c0 2-1 3.6-2 4.6V17h11.7l2 2 1.3-1.3ZM12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-11c0-3-1.6-5.4-4.5-6V4a1.5 1.5 0 0 0-3 0v1c-.7.2-1.4.5-1.9.9L18 15.3V11Z"/></svg>';
 
 // "Muted until" values: 0 = not muted, -1 = until unmuted, otherwise a time.
@@ -54,7 +20,8 @@ let activeId = null;
 let userAgent = '';
 let webviewPreload = '';
 let platform = '';
-const unread = {}; // id -> count
+const unread = {}; // id -> count shown (-1 = unread without a count, shown as a dot)
+const unreadBySource = {}; // id -> { title, badge }
 const views = {}; // id -> <webview>
 
 const serviceOf = (acc) => SERVICES[acc.service] || SERVICES.whatsapp;
@@ -149,8 +116,8 @@ function initials(name) {
 }
 
 // Windows has no taskbar badge, so draw the unread count for an overlay icon.
-function overlayImage(total) {
-  if (platform !== 'win32' || total <= 0) return null;
+function overlayImage(total, dot) {
+  if (platform !== 'win32' || (total <= 0 && !dot)) return null;
   const c = document.createElement('canvas');
   c.width = c.height = 32;
   const g = c.getContext('2d');
@@ -162,7 +129,12 @@ function overlayImage(total) {
   g.font = `bold ${total > 99 ? 13 : total > 9 ? 17 : 21}px Segoe UI, sans-serif`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText(total > 99 ? '99+' : String(total), 16, 17);
+  if (total > 0) g.fillText(total > 99 ? '99+' : String(total), 16, 17);
+  else {
+    g.beginPath();
+    g.arc(16, 16, 6, 0, Math.PI * 2);
+    g.fill();
+  }
   return c.toDataURL('image/png');
 }
 
@@ -197,6 +169,7 @@ function renderTabs() {
     badge.className = 'badge';
     const n = unread[acc.id] || 0;
     badge.textContent = n > 0 ? (n > 99 ? '99+' : String(n)) : '';
+    badge.classList.toggle('dot', n < 0);
     b.appendChild(badge);
 
     const close = document.createElement('button');
@@ -215,21 +188,36 @@ function renderTabs() {
     tabsEl.appendChild(b);
   });
 
-  // Muted accounts don't add to the Dock/taskbar/tray count.
-  const total = accounts.reduce((sum, a) => sum + (isMuted(a) ? 0 : unread[a.id] || 0), 0);
+  // Muted accounts don't add to the Dock/taskbar/tray count. Unread dots
+  // (no count) show a dot there only when nothing has a real count.
+  const counted = accounts.filter((a) => !isMuted(a));
+  const total = counted.reduce((sum, a) => sum + Math.max(0, unread[a.id] || 0), 0);
+  const dot = total === 0 && counted.some((a) => unread[a.id] < 0);
   window.api.setBadge({
     total,
-    overlay: overlayImage(total),
+    dot,
+    overlay: overlayImage(total, dot),
     accounts: accounts.map((a) => ({
       id: a.id, name: a.name, label: serviceName(a), unread: unread[a.id] || 0, muted: isMuted(a),
     })),
   });
 }
 
-function setUnread(id, n) {
-  if (unread[id] === n) return;
-  unread[id] = n;
+// Combine the title and app-badge counts: a real count wins over a dot.
+function setUnread(id, source, n) {
+  const src = (unreadBySource[id] = { ...unreadBySource[id], [source]: n });
+  const values = Object.values(src);
+  const best = Math.max(0, ...values);
+  const next = best > 0 ? best : values.includes(-1) ? -1 : 0;
+  if (unread[id] === next) return;
+  unread[id] = next;
   renderTabs();
+}
+
+function unreadFromTitle(svc, title) {
+  const m = (svc.titleCount || /^\((\d+)\)/).exec(title);
+  if (m) return parseInt(m[1], 10);
+  return svc.titleDot && svc.titleDot.test(title) ? -1 : 0;
 }
 
 function sendMuteState(acc) {
@@ -259,8 +247,7 @@ function createView(acc) {
   }
   if (svc.unread.includes('title')) {
     wv.addEventListener('page-title-updated', (e) => {
-      const m = /^\((\d+)\)/.exec(e.title);
-      setUnread(acc.id, m ? parseInt(m[1], 10) : 0);
+      setUnread(acc.id, 'title', unreadFromTitle(svc, e.title));
     });
   }
   wv.addEventListener('ipc-message', (e) => {
@@ -268,7 +255,7 @@ function createView(acc) {
       window.api.focusWindow();
       activate(acc.id);
     } else if (e.channel === 'badge' && svc.unread.includes('badge')) {
-      setUnread(acc.id, e.args[0] || 0);
+      setUnread(acc.id, 'badge', e.args[0] || 0);
     } else if (e.channel === 'call') {
       activate(acc.id);
       window.api.incomingCall();
@@ -323,6 +310,7 @@ async function removeAccount(id) {
   views[id]?.remove();
   delete views[id];
   delete unread[id];
+  delete unreadBySource[id];
   accounts = accounts.filter((a) => a.id !== id);
   await window.api.wipe(id);
   await persist();

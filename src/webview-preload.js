@@ -19,8 +19,9 @@ webFrame.executeJavaScript(`
     });
 
     // "Incoming voice call", "Incoming video call", Telegram's "Incoming Call",
-    // and the Arabic wording WhatsApp uses.
-    const CALL_RE = /\\b(incoming|voice|video)\\s+call|\\bcalling\\b|مكالمة|يتصل/i;
+    // "... is calling you" (Messenger, Teams), Slack huddle invites, and the
+    // Arabic wording WhatsApp uses.
+    const CALL_RE = /\\b(incoming|voice|video)\\s+call|\\bcalling\\b|\\bhuddle\\b|مكالمة|يتصل/i;
     const isCall = (title, opts) => {
       const o = opts || {};
       return CALL_RE.test(String(title || '') + ' ' + String(o.body || '')) || /^call_/.test(String(o.tag || ''));

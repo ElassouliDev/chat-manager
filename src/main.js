@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, na
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
+const { SERVICES, SIGN_IN_HOSTS } = require('./services');
 
 const APP_NAME = 'Chat Manager';
 const APP_ID = 'com.local.chatmanager';
@@ -54,8 +55,6 @@ const CHROME_UA = `Mozilla/5.0 (${osPart}) AppleWebKit/537.36 (KHTML, like Gecko
 app.userAgentFallback = CHROME_UA;
 
 // Pages that stay inside the app; any other link opens in the browser.
-// WhatsApp and Telegram pages; other links they open go to the browser.
-const IN_APP_HOSTS = new Set(['web.whatsapp.com', 'web.telegram.org']);
 
 // What the chat pages may use: notifications, and microphone/camera for calls.
 const ALLOWED_PERMISSIONS = new Set([
@@ -133,8 +132,12 @@ let status = { total: 0, accounts: [] }; // latest unread info from the window
 // Started by "Open at login": stay in the tray until the user opens the window.
 const startHidden = process.argv.includes('--hidden') || (IS_MAC && app.getLoginItemSettings().wasOpenedAtLogin);
 
-function configurePartition(partition) {
+// Which service each account session belongs to, for the link rules below.
+const serviceBySession = new Map();
+
+function configurePartition(partition, service) {
   const ses = session.fromPartition(partition);
+  serviceBySession.set(ses, SERVICES[service] || SERVICES.whatsapp);
   ses.setUserAgent(CHROME_UA);
   ses.setPermissionRequestHandler((_wc, permission, cb) => cb(ALLOWED_PERMISSIONS.has(permission)));
   ses.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission));
@@ -268,7 +271,7 @@ function createTray() {
 function updateTray() {
   if (!tray) return;
   const accountItems = status.accounts.map((a) => ({
-    label: `${a.name} · ${a.label}${a.unread > 0 ? `  (${a.unread})` : ''}${a.muted ? '  — muted' : ''}`,
+    label: `${a.name} · ${a.label}${a.unread > 0 ? `  (${a.unread})` : a.unread < 0 ? '  •' : ''}${a.muted ? '  — muted' : ''}`,
     click: () => {
       showWindow();
       send('switch-to', a.id);
@@ -285,7 +288,7 @@ function updateTray() {
   ]);
   tray.setContextMenu(menu);
   tray.setToolTip(status.total > 0 ? `${APP_NAME} — ${status.total} unread` : APP_NAME);
-  if (IS_MAC) tray.setTitle(status.total > 0 ? String(status.total) : '');
+  if (IS_MAC) tray.setTitle(status.total > 0 ? String(status.total) : status.dot ? '•' : '');
 }
 
 // ---------- chat pages ----------
@@ -296,15 +299,24 @@ const hostOf = (url) => {
     return '';
   }
 };
-const isInApp = (url) => IN_APP_HOSTS.has(hostOf(url));
+const onHost = (url, hosts) => {
+  const host = hostOf(url);
+  return hosts.some((h) => host === h || host.endsWith('.' + h));
+};
 
-// Microsoft sign-in can open a small popup window; those stay inside the app
-// (and in the account's own session) instead of going to the browser.
-const SIGN_IN_POPUP_HOSTS = [
-  'login.microsoftonline.com', 'login.microsoft.com', 'login.live.com', 'account.live.com',
-  'teams.microsoft.com', 'teams.cloud.microsoft', 'teams.live.com',
-];
-const isSignInPopup = (url) => url === 'about:blank' || SIGN_IN_POPUP_HOSTS.some((h) => hostOf(url) === h || hostOf(url).endsWith('.' + h));
+// A page may stay inside the app when it belongs to the account's own service
+// or is a common sign-in page. Services with company sign-in (sso) may go anywhere.
+function staysInApp(svc, url) {
+  if (!svc || svc.sso) return true;
+  return onHost(url, [...(svc.hosts || []), ...SIGN_IN_HOSTS]);
+}
+
+// Sign-in popups ("Continue with Google", Microsoft login) open in a small
+// window inside the app, in the account's own session.
+function isSignInPopup(svc, url) {
+  if (url === 'about:blank') return Boolean(svc && svc.sso);
+  return onHost(url, SIGN_IN_HOSTS) || (svc && svc.sso && onHost(url, svc.hosts || []));
+}
 
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() === 'window') {
@@ -317,11 +329,11 @@ app.on('web-contents-created', (_e, contents) => {
     return;
   }
   if (contents.getType() !== 'webview') return;
+  const svc = () => serviceBySession.get(contents.session);
 
-  // Links clicked inside a chat open in the default browser.
+  // Links that open a new window go to the default browser, except sign-in popups.
   contents.setWindowOpenHandler(({ url }) => {
-    const fromWhatsAppOrTelegram = isInApp(contents.getURL());
-    if (!fromWhatsAppOrTelegram && isSignInPopup(url)) {
+    if (isSignInPopup(svc(), url)) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: { width: 520, height: 720, autoHideMenuBar: true, parent: win || undefined },
@@ -331,11 +343,9 @@ app.on('web-contents-created', (_e, contents) => {
     return { action: 'deny' };
   });
 
-  // WhatsApp and Telegram never leave their own site, so any other page they
-  // navigate to opens in the browser. Teams signs in through Microsoft's pages
-  // and often a company's own login page, so it may go anywhere.
+  // Links that would take the account to another site open in the browser instead.
   contents.on('will-navigate', (ev, url) => {
-    if (isInApp(contents.getURL()) && !isInApp(url)) {
+    if (!staysInApp(svc(), url)) {
       ev.preventDefault();
       if (/^https?:/.test(url)) shell.openExternal(url);
     }
@@ -345,7 +355,7 @@ app.on('web-contents-created', (_e, contents) => {
 // ---------- messages from the window ----------
 ipcMain.handle('accounts:load', () => {
   const accounts = loadAccounts();
-  accounts.forEach((a) => configurePartition(`persist:${a.id}`));
+  accounts.forEach((a) => configurePartition(`persist:${a.id}`, a.service));
   return {
     accounts,
     platform: process.platform,
@@ -356,7 +366,7 @@ ipcMain.handle('accounts:load', () => {
 });
 
 ipcMain.handle('accounts:save', (_e, accounts) => {
-  accounts.forEach((a) => configurePartition(`persist:${a.id}`));
+  accounts.forEach((a) => configurePartition(`persist:${a.id}`, a.service));
   writeJson(STORE, accounts);
 });
 
@@ -367,8 +377,8 @@ ipcMain.handle('accounts:wipe', async (_e, id) => {
 
 ipcMain.on('badge:set', (_e, next) => {
   status = next;
-  const { total } = next;
-  if (IS_MAC) app.dock.setBadge(total > 0 ? String(total) : '');
+  const { total, dot } = next;
+  if (IS_MAC) app.dock.setBadge(total > 0 ? String(total) : dot ? '•' : '');
   else app.setBadgeCount(total);
   if (IS_WIN && win) {
     // The Windows taskbar has no badge API, so draw the count as an overlay.
