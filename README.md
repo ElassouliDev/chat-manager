@@ -19,9 +19,17 @@ npm start
   - WhatsApp: **Linked devices → Link a device**
   - Telegram: **Settings → Devices → Add Device** (or log in with your phone number)
 - Click an icon, or press Cmd/Ctrl+1 to 9, to switch accounts. A small marker on each icon shows which service it is.
-- Badges show unread counts per account; the total appears on the Dock/taskbar.
+- Badges show unread counts per account; the total appears on the Dock/taskbar and in the tray.
 - Clicking a desktop notification jumps to the right account.
-- Right-click an icon to rename, recolour, reload, reorder, or remove (log out) an account.
+- Hover an icon and click **×** to remove (log out) that account.
+- Right-click an icon to rename, recolour, **mute** (1 hour, 8 hours, 1 day, or until you unmute), reload, or reorder it.
+  A muted account shows no notifications and plays no sounds, and its unread count is left out of the total. Calls still come through.
+
+### Runs in the background
+
+- Closing the window keeps Chat Manager running in the tray (Windows) or menu bar (Mac), so notifications and calls still arrive. Quit from the tray menu, **Cmd+Q** on Mac, or **Ctrl+Q** on Windows.
+- An incoming call brings the window to the front on the account that's ringing, even when it's hidden.
+- Turn on **Open at login** in the tray menu to start Chat Manager quietly in the background when you sign in.
 
 Upgrading from **Multi WhatsApp**: your accounts and logins are carried over automatically on first launch.
 

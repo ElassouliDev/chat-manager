@@ -76,3 +76,22 @@ dialog p:empty { display: none; }
   font-size: 14px; font-weight: 600; cursor: pointer; }
 #dlg-services button svg { width: 20px; height: 20px; color: var(--svc); }
 #dlg-services button.sel { border-color: var(--svc); background: color-mix(in srgb, var(--svc) 14%, var(--bg)); }
+
+/* account icons are divs so they can hold the × button */
+.tab { display: grid; place-items: center; user-select: none; outline: none; }
+.tab:focus-visible { box-shadow: 0 0 0 2px var(--text); }
+
+/* × to remove an account, shown on hover */
+.tab .close { position: absolute; top: -6px; left: -6px; width: 20px; height: 20px; padding: 0; border-radius: 50%;
+  border: 2px solid var(--side); background: #3b4a54; color: var(--text); font-size: 14px; line-height: 15px;
+  cursor: pointer; opacity: 0; transform: scale(.8); transition: opacity .12s, transform .12s; }
+.tab:hover .close, .tab:focus-within .close { opacity: 1; transform: scale(1); }
+.tab .close:hover { background: var(--danger); color: #fff; }
+
+/* muted accounts */
+.tab .mute-mark { position: absolute; left: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; background: #3b4a54; color: var(--text); border: 2px solid var(--side); }
+.tab .mute-mark svg { width: 12px; height: 12px; }
+.tab.muted .badge { background: var(--muted); }
+
+.menu-note { padding: 6px 16px 4px; font-size: 12px; color: var(--muted); }
