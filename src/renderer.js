@@ -388,6 +388,32 @@ window.addEventListener('click', (e) => { if (menuFor && !menuEl.contains(e.targ
 window.addEventListener('blur', closeMenu);
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
+// ---------- theme ----------
+const THEME_ICONS = {
+  system: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2v16a8 8 0 0 1 0-16Z"/></svg>',
+  light: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0-5 1 3h-2l1-3Zm0 20-1-3h2l-1 3ZM2 12l3-1v2l-3-1Zm20 0-3 1v-2l3 1ZM4.9 4.9l2.8 1.4-1.4 1.4-1.4-2.8Zm14.2 14.2-2.8-1.4 1.4-1.4 1.4 2.8Zm0-14.2-1.4 2.8-1.4-1.4 2.8-1.4ZM4.9 19.1l1.4-2.8 1.4 1.4-2.8 1.4Z"/></svg>',
+  dark: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20.7 14.6A8.5 8.5 0 0 1 9.4 3.3 9 9 0 1 0 20.7 14.6Z"/></svg>',
+};
+const THEME_NAMES = { system: 'System', light: 'Light', dark: 'Dark' };
+const THEME_ORDER = ['system', 'light', 'dark'];
+const themeBtn = document.getElementById('theme');
+let theme = 'system';
+
+function showTheme(next) {
+  theme = THEME_ORDER.includes(next) ? next : 'system';
+  const after = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+  themeBtn.innerHTML = THEME_ICONS[theme]; // static SVG defined above
+  themeBtn.title = `Theme: ${THEME_NAMES[theme]} — click for ${THEME_NAMES[after]}`;
+  themeBtn.setAttribute('aria-label', themeBtn.title);
+}
+
+themeBtn.onclick = () => {
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+  showTheme(next);
+  window.api.setTheme(next);
+};
+window.api.on('theme', showTheme);
+
 document.getElementById('add').onclick = addAccount;
 window.api.on('add-account', addAccount);
 window.api.on('switch-index', (i) => accounts[i] && activate(accounts[i].id));
@@ -401,6 +427,7 @@ window.api.on('reload-current', () => activeId && views[activeId]?.reload());
   userAgent = data.userAgent;
   webviewPreload = data.webviewPreload;
   platform = data.platform;
+  showTheme(data.theme);
   accounts.forEach(createView);
   await persist();
   if (accounts[0]) activate(accounts[0].id);

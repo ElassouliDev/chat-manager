@@ -24,6 +24,8 @@ npm start
 - Hover an icon and click **×** to remove (log out) that account.
 - Right-click an icon to rename, recolour, **mute** (1 hour, 8 hours, 1 day, or until you unmute), reload, or reorder it.
   A muted account shows no notifications and plays no sounds, and its unread count is left out of the total. Calls still come through.
+- Switch between **System**, **Light**, and **Dark** with the button at the bottom of the sidebar, or from **View → Theme** or the tray menu.
+  WhatsApp and Telegram follow along when their own theme setting is "System default".
 
 ### Runs in the background
 

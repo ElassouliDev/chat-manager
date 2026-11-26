@@ -7,8 +7,9 @@ contextBridge.exposeInMainWorld('api', {
   setBadge: (status) => ipcRenderer.send('badge:set', status),
   focusWindow: () => ipcRenderer.send('window:focus'),
   incomingCall: () => ipcRenderer.send('call:incoming'),
+  setTheme: (theme) => ipcRenderer.send('theme:set', theme),
   on: (channel, fn) => {
-    const allowed = ['switch-index', 'switch-to', 'add-account', 'reload-current'];
+    const allowed = ['switch-index', 'switch-to', 'add-account', 'reload-current', 'theme'];
     if (allowed.includes(channel)) ipcRenderer.on(channel, (_e, ...args) => fn(...args));
   },
 });

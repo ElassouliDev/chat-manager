@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Menu, Tray, nativeImage, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -88,6 +88,40 @@ function loadAccounts() {
 const settings = readJson(SETTINGS, {});
 const saveSettings = () => writeJson(SETTINGS, settings);
 
+// ---------- theme ----------
+// nativeTheme drives prefers-color-scheme for our sidebar and for the
+// WhatsApp and Telegram pages (when their own theme is "System default").
+const THEMES = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+];
+nativeTheme.themeSource = THEMES.some((t) => t.id === settings.theme) ? settings.theme : 'system';
+
+const windowBackground = () => (nativeTheme.shouldUseDarkColors ? '#111b21' : '#f0f2f5');
+
+function setTheme(theme) {
+  if (!THEMES.some((t) => t.id === theme)) return;
+  nativeTheme.themeSource = theme;
+  settings.theme = theme;
+  saveSettings();
+  buildMenu();
+  updateTray();
+  send('theme', theme);
+}
+
+nativeTheme.on('updated', () => {
+  if (win && !win.isDestroyed()) win.setBackgroundColor(windowBackground());
+});
+
+const themeMenuItems = () =>
+  THEMES.map((t) => ({
+    label: t.label,
+    type: 'radio',
+    checked: nativeTheme.themeSource === t.id,
+    click: () => setTheme(t.id),
+  }));
+
 // ---------- window ----------
 let win = null;
 let tray = null;
@@ -112,7 +146,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     title: APP_NAME,
-    backgroundColor: '#111b21',
+    backgroundColor: windowBackground(),
     icon: IS_MAC ? undefined : path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -181,7 +215,11 @@ function buildMenu() {
     { label: 'Accounts', submenu: switchItems },
     {
       label: 'View',
-      submenu: [{ role: 'toggleDevTools' }, { role: 'togglefullscreen' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }],
+      submenu: [
+        { label: 'Theme', submenu: themeMenuItems() },
+        { type: 'separator' },
+        { role: 'toggleDevTools' }, { role: 'togglefullscreen' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+      ],
     },
     { role: 'windowMenu' },
   ];
@@ -224,6 +262,7 @@ function updateTray() {
     { label: `Open ${APP_NAME}`, click: () => showWindow() },
     ...(accountItems.length ? [{ type: 'separator' }, ...accountItems] : []),
     { type: 'separator' },
+    { label: 'Theme', submenu: themeMenuItems() },
     { label: 'Open at login', type: 'checkbox', checked: isOpenAtLogin(), click: (item) => setOpenAtLogin(item.checked) },
     { type: 'separator' },
     { label: `Quit ${APP_NAME}`, click: () => app.quit() },
@@ -273,6 +312,7 @@ ipcMain.handle('accounts:load', () => {
   return {
     accounts,
     platform: process.platform,
+    theme: nativeTheme.themeSource,
     userAgent: CHROME_UA,
     webviewPreload: pathToFileURL(path.join(__dirname, 'webview-preload.js')).href,
   };
@@ -304,6 +344,7 @@ ipcMain.on('badge:set', (_e, next) => {
 });
 
 ipcMain.on('window:focus', () => showWindow());
+ipcMain.on('theme:set', (_e, theme) => setTheme(theme));
 
 // An account is ringing: bring the app forward on that account, even from the tray.
 ipcMain.on('call:incoming', () => {
