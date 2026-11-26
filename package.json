@@ -1,0 +1,33 @@
+{
+  "name": "multi-whatsapp",
+  "productName": "Multi WhatsApp",
+  "version": "1.0.0",
+  "description": "Run several WhatsApp accounts side by side on Mac and Windows",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist": "electron-builder --mac --win"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.local.multiwhatsapp",
+    "productName": "Multi WhatsApp",
+    "files": ["src/**/*", "package.json"],
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.social-networking"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

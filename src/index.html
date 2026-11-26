@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'" />
+  <title>Multi WhatsApp</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav id="sidebar">
+    <div id="tabs"></div>
+    <button id="add" class="side-btn" title="Add account (Ctrl/Cmd+N)">+</button>
+  </nav>
+  <main id="views"></main>
+
+  <div id="menu" class="menu hidden">
+    <button data-act="rename">Rename</button>
+    <button data-act="color">Change colour</button>
+    <button data-act="reload">Reload</button>
+    <button data-act="up">Move up</button>
+    <button data-act="down">Move down</button>
+    <hr />
+    <button data-act="remove" class="danger">Remove &amp; log out</button>
+  </div>
+
+  <dialog id="dlg">
+    <form method="dialog">
+      <h3 id="dlg-title"></h3>
+      <p id="dlg-text"></p>
+      <input id="dlg-input" autocomplete="off" />
+      <div id="dlg-colors"></div>
+      <div class="dlg-actions">
+        <button value="cancel">Cancel</button>
+        <button value="ok" id="dlg-ok" class="primary">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
