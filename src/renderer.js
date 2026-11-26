@@ -233,6 +233,11 @@ function createView(acc) {
   wv.setAttribute('allowpopups', '');
   wv.src = svc.url;
   wv.addEventListener('dom-ready', () => sendMuteState(acc));
+  if (svc.signIn) {
+    wv.addEventListener('did-navigate', (e) => {
+      if (svc.signIn.when.test(e.url)) wv.loadURL(svc.signIn.url);
+    });
+  }
   if (svc.reloadOn) {
     let retries = 0;
     wv.addEventListener('console-message', (e) => {

@@ -10,8 +10,11 @@
 //   hosts       sites the account may move between inside the app; links to
 //               anything else open in the browser
 //   sso         true when sign-in can go through a company's own login page,
-//               so the account may move to any site
+//               so the account may move to any site; its own pop-out windows
+//               (hosts) and blank popups also open inside the app
 //   reloadOn    console message that means the page is stuck; reload it
+//   signIn      { when, url }: when the account lands on a page matching
+//               `when` (a signed-out product page), open `url` to sign in
 //   keeps       what stays safe when the account is removed from the app
 //   hint        sign-in tip shown in the Add account dialog
 (function () {
@@ -42,6 +45,7 @@
       url: 'https://teams.microsoft.com/v2/',
       color: '#5B5FC7',
       unread: ['title', 'badge'],
+      hosts: ['teams.microsoft.com', 'teams.cloud.microsoft', 'teams.live.com'],
       sso: true,
       // Teams' startup loader sometimes gives up on a cold start and leaves a blank page.
       reloadOn: /Pre-loader startup failed/,
@@ -56,6 +60,7 @@
       unread: ['title', 'badge'],
       // Slack marks unread with "*" (and mentions with "!") at the start of the title.
       titleDot: /^[*!]\s/,
+      hosts: ['slack.com'],
       sso: true,
       keeps: 'Your messages stay in your Slack workspace.',
       hint: 'sign in to your Slack workspace (email, Google, Apple, or your company sign-in).',
@@ -123,6 +128,51 @@
       keeps: 'Your messages stay in your Discord account.',
       hint: 'log in with your Discord account, or scan the QR code with the Discord app.',
       icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.3 5.3A16.4 16.4 0 0 0 15.2 4l-.5 1a15 15 0 0 0-5.4 0l-.5-1a16.4 16.4 0 0 0-4.1 1.3C2.1 9.2 1.4 13 1.7 16.8a16.6 16.6 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.9l.4-.3a11.8 11.8 0 0 0 11 0l.4.3c-.5.4-1.1.7-1.7.9l1.1 1.7a16.6 16.6 0 0 0 5-2.5c.4-4.4-.7-8.2-3-11.5ZM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z"/></svg>',
+    },
+    gmail: {
+      label: 'Gmail',
+      url: 'https://mail.google.com/mail/u/0/#inbox',
+      color: '#EA4335',
+      unread: ['title', 'badge'],
+      // "Inbox (3) - you@gmail.com - Gmail"
+      titleCount: /\((\d+)\)/,
+      // Google Workspace accounts may sign in through a company login page.
+      hosts: ['mail.google.com'],
+      sso: true,
+      keeps: 'Your email stays in your Google account.',
+      hint: 'sign in with your Google account (Gmail or Google Workspace).',
+      icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M3.5 5h17A1.5 1.5 0 0 1 22 6.5v11a1.5 1.5 0 0 1-1.5 1.5H18V9.8l-6 4.5-6-4.5V19H3.5A1.5 1.5 0 0 1 2 17.5v-11A1.5 1.5 0 0 1 3.5 5Zm.9 1.8L12 12.5l7.6-5.7H4.4Z"/></svg>',
+    },
+    googlechat: {
+      label: 'Google Chat',
+      url: 'https://chat.google.com/',
+      color: '#00AC47',
+      // Signed out, Google Chat shows a product page; go to Google sign-in instead.
+      signIn: {
+        when: /^https:\/\/workspace\.google\.com\/(intl\/[^/]+\/)?products\/chat/,
+        url: 'https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fchat.google.com%2F&followup=https%3A%2F%2Fchat.google.com%2F',
+      },
+      unread: ['title', 'badge'],
+      titleCount: /\((\d+)\)/,
+      hosts: ['chat.google.com'],
+      sso: true,
+      keeps: 'Your chats stay in your Google account.',
+      hint: 'sign in with your Google account (Gmail or Google Workspace).',
+      icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4.5 3h15A1.5 1.5 0 0 1 21 4.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-5 4V4.5A1.5 1.5 0 0 1 4.5 3ZM7 8v2h10V8H7Zm0 3.5v2h7v-2H7Z"/></svg>',
+    },
+    outlook: {
+      label: 'Outlook',
+      fullName: 'Outlook (Microsoft mail)',
+      url: 'https://outlook.office.com/mail/',
+      color: '#0078D4',
+      // Outlook on the web is an installable web app and sets the app badge.
+      unread: ['badge', 'title'],
+      titleCount: /\((\d+)\)/,
+      hosts: ['outlook.office.com', 'outlook.office365.com', 'outlook.live.com'],
+      sso: true,
+      keeps: 'Your email stays in your Microsoft account.',
+      hint: 'sign in with your Microsoft work, school, or personal account (Outlook.com, Hotmail, Live).',
+      icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 5h7.5A1.5 1.5 0 0 1 22 6.5v11a1.5 1.5 0 0 1-1.5 1.5H13v-6.2l2.2 1.6L21 10V7.6l-5.8 4.1L13 10.2V5ZM2 4.8 12 3v18L2 19.2V4.8Zm5 3.7c-1.7 0-2.8 1.5-2.8 3.5s1.1 3.5 2.8 3.5 2.8-1.5 2.8-3.5S8.7 8.5 7 8.5Zm0 1.6c.7 0 1.1.8 1.1 1.9s-.4 1.9-1.1 1.9-1.1-.8-1.1-1.9.4-1.9 1.1-1.9Z"/></svg>',
     },
   };
 

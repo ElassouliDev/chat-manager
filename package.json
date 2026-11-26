@@ -1,8 +1,8 @@
 {
   "name": "chat-manager",
   "productName": "Chat Manager",
-  "version": "1.5.0",
-  "description": "WhatsApp, Telegram, Teams, Slack, Messenger, Facebook, Instagram, LinkedIn, X and Discord accounts side by side in one desktop app for Mac and Windows",
+  "version": "1.6.0",
+  "description": "Chat and mail accounts side by side in one desktop app for Mac and Windows: WhatsApp, Telegram, Teams, Slack, Messenger, Facebook, Instagram, LinkedIn, X, Discord, Gmail, Google Chat and Outlook",
   "license": "MIT",
   "author": "Yehia Elassouli",
   "main": "src/main.js",

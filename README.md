@@ -2,7 +2,7 @@
 
 # Chat Manager
 
-A desktop app (Mac and Windows) that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, and **Discord** at the same time.
+A desktop app (Mac and Windows) that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, **Discord**, **Gmail**, **Google Chat**, and **Outlook** at the same time.
 Each account runs in its own isolated web session, so logins never mix.
 
 ## Run it
@@ -21,6 +21,8 @@ npm start
   - Teams: your Microsoft work, school, or personal account. Company sign-in pages open inside the app. The first start can take up to a minute while Teams loads.
   - Slack: your workspace, including Google, Apple, or company sign-in.
   - Messenger, Facebook, Instagram, LinkedIn, X, Discord: your usual login. "Continue with Google/Apple" opens a small sign-in window inside the app.
+  - Gmail, Google Chat: your Google account (Gmail or Google Workspace).
+  - Outlook: your Microsoft work, school, or personal account (Outlook.com, Hotmail, Live).
   - Links to other websites open in your normal browser.
 - Click an icon, or press Cmd/Ctrl+1 to 9, to switch accounts. A small marker on each icon shows which service it is.
 - Badges show unread counts per account; the total appears on the Dock/taskbar and in the tray.
@@ -52,7 +54,7 @@ On Windows, choose **More info → Run anyway** in SmartScreen.
 
 ## Disclaimer
 
-This is an independent project and is not affiliated with or endorsed by any of the services it hosts (WhatsApp, Meta, Telegram, Microsoft, Slack, LinkedIn, X, or Discord).
+This is an independent project and is not affiliated with or endorsed by any of the services it hosts (WhatsApp, Meta, Telegram, Microsoft, Slack, LinkedIn, X, Discord, or Google).
 It loads each service's official website in its own separate session.
 
 ## License
