@@ -16,7 +16,7 @@ body { display: flex; }
   align-items: center; padding: 12px 0; gap: 10px; border-right: 1px solid #0b141a;
   -webkit-app-region: drag; }
 body.mac #sidebar { padding-top: 12px; }
-#tabs { display: flex; flex-direction: column; gap: 10px; align-items: center; overflow-y: auto; }
+#tabs { display: flex; flex-direction: column; gap: 10px; align-items: center; overflow-y: auto; padding: 8px 10px; margin-top: -8px; }
 #tabs, .side-btn { -webkit-app-region: no-drag; }
 
 .tab { position: relative; width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer;
@@ -63,3 +63,16 @@ dialog p:empty { display: none; }
   color: var(--text); cursor: pointer; font-size: 14px; }
 .dlg-actions .primary { background: var(--accent); color: #111b21; font-weight: 600; }
 .dlg-actions .primary.danger-btn { background: var(--danger); color: #fff; }
+
+/* service marker on each account icon */
+.tab .kind { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff; border: 2px solid var(--side); }
+.tab .kind svg { width: 13px; height: 13px; }
+
+/* service picker in the Add account dialog */
+#dlg-services { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+#dlg-services button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px;
+  border-radius: 8px; border: 2px solid var(--hover); background: var(--bg); color: var(--text);
+  font-size: 14px; font-weight: 600; cursor: pointer; }
+#dlg-services button svg { width: 20px; height: 20px; color: var(--svc); }
+#dlg-services button.sel { border-color: var(--svc); background: color-mix(in srgb, var(--svc) 14%, var(--bg)); }

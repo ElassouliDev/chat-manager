@@ -1,8 +1,8 @@
 {
-  "name": "multi-whatsapp",
-  "productName": "Multi WhatsApp",
-  "version": "1.0.0",
-  "description": "Run several WhatsApp accounts side by side on Mac and Windows",
+  "name": "chat-manager",
+  "productName": "Chat Manager",
+  "version": "1.1.0",
+  "description": "WhatsApp and Telegram accounts side by side in one desktop app for Mac and Windows",
   "license": "MIT",
   "author": "Yehia Elassouli",
   "main": "src/main.js",
@@ -10,26 +10,41 @@
     "start": "electron .",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
-    "dist": "electron-builder --mac --win"
+    "dist": "electron-builder --mac --win",
+    "icon": "electron scripts/make-icon.js"
   },
   "devDependencies": {
     "electron": "33.2.1",
     "electron-builder": "25.1.8"
   },
   "build": {
-    "appId": "com.local.multiwhatsapp",
-    "productName": "Multi WhatsApp",
-    "files": ["src/**/*", "package.json"],
+    "appId": "com.local.chatmanager",
+    "productName": "Chat Manager",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
     "mac": {
-      "target": ["dmg"],
-      "category": "public.app-category.social-networking"
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.social-networking",
+      "icon": "build/icon.png",
+      "artifactName": "Chat-Manager-${version}-${arch}.${ext}"
     },
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon-win.png"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Chat-Manager-Setup-${version}.${ext}"
+    },
+    "directories": {
+      "buildResources": "build"
     }
   }
 }

@@ -3,7 +3,38 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 
-// WhatsApp Web refuses unknown browsers, so present ourselves as the
+const APP_NAME = 'Chat Manager';
+
+// Same data folder whether run from source or installed.
+app.setName(APP_NAME);
+app.setPath('userData', process.env.CHAT_MANAGER_DATA || path.join(app.getPath('appData'), APP_NAME));
+
+// Earlier versions were called "Multi WhatsApp". Carry their accounts and
+// logged-in sessions over so nobody has to scan QR codes again.
+function migrateFromOldName() {
+  const target = app.getPath('userData');
+  if (fs.existsSync(path.join(target, 'accounts.json'))) return;
+  for (const old of ['Multi WhatsApp', 'multi-whatsapp']) {
+    const src = path.join(app.getPath('appData'), old);
+    if (!fs.existsSync(path.join(src, 'accounts.json'))) continue;
+    try {
+      fs.mkdirSync(target, { recursive: true });
+      fs.copyFileSync(path.join(src, 'accounts.json'), path.join(target, 'accounts.json'));
+      if (fs.existsSync(path.join(src, 'Partitions'))) {
+        fs.cpSync(path.join(src, 'Partitions'), path.join(target, 'Partitions'), {
+          recursive: true,
+          filter: (p) => !/Singleton|\.lock$|LOCK$/.test(path.basename(p)),
+        });
+      }
+    } catch (err) {
+      console.error('Migration from', src, 'failed:', err);
+    }
+    return;
+  }
+}
+migrateFromOldName();
+
+// Some services refuse unknown browsers, so present ourselves as the
 // real Chrome version that Electron ships with.
 const osPart =
   process.platform === 'darwin'
@@ -14,13 +45,17 @@ const osPart =
 const CHROME_UA = `Mozilla/5.0 (${osPart}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
 app.userAgentFallback = CHROME_UA;
 
+// Pages that stay inside the app; any other link opens in the browser.
+const IN_APP_HOSTS = new Set(['web.whatsapp.com', 'web.telegram.org']);
+
 const STORE = path.join(app.getPath('userData'), 'accounts.json');
 
 function loadAccounts() {
   try {
-    return JSON.parse(fs.readFileSync(STORE, 'utf8'));
+    const accounts = JSON.parse(fs.readFileSync(STORE, 'utf8'));
+    return accounts.map((a) => ({ service: 'whatsapp', ...a }));
   } catch {
-    return [{ id: 'acc-' + Date.now(), name: 'Account 1', color: '#25D366' }];
+    return [{ id: 'acc-' + Date.now(), name: 'Account 1', color: '#25D366', service: 'whatsapp' }];
   }
 }
 
@@ -45,7 +80,7 @@ function createWindow() {
     height: 850,
     minWidth: 800,
     minHeight: 600,
-    title: 'Multi WhatsApp',
+    title: APP_NAME,
     backgroundColor: '#111b21',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -90,7 +125,15 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// Links clicked inside WhatsApp open in the default browser.
+function isInApp(url) {
+  try {
+    return IN_APP_HOSTS.has(new URL(url).host);
+  } catch {
+    return false;
+  }
+}
+
+// Links clicked inside a chat open in the default browser.
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return;
   contents.setWindowOpenHandler(({ url }) => {
@@ -98,9 +141,9 @@ app.on('web-contents-created', (_e, contents) => {
     return { action: 'deny' };
   });
   contents.on('will-navigate', (ev, url) => {
-    if (!url.startsWith('https://web.whatsapp.com')) {
+    if (!isInApp(url)) {
       ev.preventDefault();
-      shell.openExternal(url);
+      if (/^https?:/.test(url)) shell.openExternal(url);
     }
   });
 });
@@ -128,7 +171,7 @@ ipcMain.handle('accounts:wipe', async (_e, id) => {
 ipcMain.on('badge:set', (_e, total) => {
   if (process.platform === 'darwin') app.dock.setBadge(total > 0 ? String(total) : '');
   else app.setBadgeCount(total);
-  if (win) win.setTitle(total > 0 ? `(${total}) Multi WhatsApp` : 'Multi WhatsApp');
+  if (win) win.setTitle(total > 0 ? `(${total}) ${APP_NAME}` : APP_NAME);
   if (process.platform === 'win32' && win && total > 0 && !win.isFocused()) win.flashFrame(true);
 });
 
@@ -139,7 +182,12 @@ ipcMain.on('window:focus', () => {
   win.focus();
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Installed builds take their icon from the app bundle; this covers `npm start`.
+  const devIcon = path.join(__dirname, '..', 'build', 'icon.png');
+  if (process.platform === 'darwin' && !app.isPackaged && fs.existsSync(devIcon)) app.dock.setIcon(devIcon);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

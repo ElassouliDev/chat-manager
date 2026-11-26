@@ -1,22 +1,39 @@
-// Runs inside each WhatsApp Web view. When the user clicks a desktop
-// notification, tell the host window so it can jump to that account.
+// Runs inside each chat service's page. It reports two things to the host
+// window: notification clicks (to jump to that account) and the unread count
+// that services such as Telegram publish through navigator.setAppBadge().
 const { ipcRenderer, webFrame } = require('electron');
 
 webFrame.executeJavaScript(`
   (() => {
+    if (window.__chatMgr) return;
+    window.__chatMgr = true;
+    const post = (msg) => window.postMessage({ __chatMgr: msg }, '*');
+
     const Native = window.Notification;
-    if (!Native || Native.__multiWa) return;
-    class Wrapped extends Native {
-      constructor(title, opts) {
-        super(title, opts);
-        this.addEventListener('click', () => window.postMessage({ __multiWa: 'notification-click' }, '*'));
+    if (Native) {
+      class Wrapped extends Native {
+        constructor(title, opts) {
+          super(title, opts);
+          this.addEventListener('click', () => post({ type: 'notification-click' }));
+        }
       }
+      window.Notification = Wrapped;
     }
-    Wrapped.__multiWa = true;
-    window.Notification = Wrapped;
+
+    navigator.setAppBadge = (count) => {
+      post({ type: 'badge', count: typeof count === 'number' ? count : 0 });
+      return Promise.resolve();
+    };
+    navigator.clearAppBadge = () => {
+      post({ type: 'badge', count: 0 });
+      return Promise.resolve();
+    };
   })();
 `);
 
 window.addEventListener('message', (e) => {
-  if (e.data && e.data.__multiWa === 'notification-click') ipcRenderer.sendToHost('notification-click');
+  const msg = e.data && e.data.__chatMgr;
+  if (!msg) return;
+  if (msg.type === 'notification-click') ipcRenderer.sendToHost('notification-click');
+  if (msg.type === 'badge') ipcRenderer.sendToHost('badge', Math.max(0, msg.count | 0));
 });
