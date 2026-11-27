@@ -2,7 +2,7 @@
 
 # Chat Manager
 
-A desktop app (Mac and Windows) and Android app that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, **Discord**, **Gmail**, **Google Chat**, and **Outlook** at the same time.
+A desktop app (Mac and Windows) that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, **Discord**, **Gmail**, **Google Chat**, and **Outlook** at the same time, plus an Android hub that opens all your chat apps from one list.
 Each account runs in its own isolated web session, so logins never mix.
 
 ## Run it
@@ -55,13 +55,13 @@ On Windows, choose **More info → Run anyway** in SmartScreen.
 
 ## Android app
 
-The `android/` folder holds a native Android version (Android 8 and newer) with the same 13 services.
+The `android/` folder holds a native Android **hub** (Android 8 and newer). It never signs in to anything: each account opens the **real app** on your phone, already signed in.
 
-- Account icons run along the top; tap to switch, long-press to rename, mute, reorder, reload, or remove.
-- Each account has its own WebView profile, so logins stay separate.
-- Messages arrive as Android notifications. Incoming calls ring with **Answer** and **Decline** (full screen on the lock screen); Answer opens the account and accepts, Decline rejects without opening the app.
-- A quiet "Chat Manager is running" notification keeps chats connected in the background. Use Back or Home to leave the app; swiping it away from Recent apps stops it.
-- WhatsApp on a phone: in WhatsApp on the phone you want to add, go to **Linked devices → Link a device → Link with phone number instead**, then type the code shown in Chat Manager.
+- **+ Add** lists every chat app installed on the phone, including dual / clone copies (Samsung Dual Messenger, Xiaomi Dual Apps…) and work-profile copies (Shelter, Island). Pick one and name it.
+- Tap an account to open that exact app copy; long-press to rename, move up / down, or remove it (removing only takes it off the list).
+- With **notification access** turned on, each account shows its unread count and latest message, read from that app's notifications.
+- Supported: WhatsApp and WhatsApp Business, Telegram, Teams, Slack, Messenger, Facebook, Instagram, LinkedIn, X, Discord, Gmail, Google Chat, Outlook, Signal, Viber.
+- Several WhatsApp numbers: WhatsApp's own **Add account** (Settings → arrow next to your name), WhatsApp Business, the phone's dual-apps feature, or a work profile. Two accounts inside the same WhatsApp app share its notifications, so their unread counts are combined.
 
 Build it (needs Android Studio's SDK and Java 17):
 

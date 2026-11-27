@@ -10,26 +10,27 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-/** The accounts and their order, saved in SharedPreferences as JSON. */
+/**
+ * The accounts in the hub and their order. Each account points at one
+ * installed app copy: a package in a user profile (the main phone, a dual /
+ * clone copy, or a work profile), identified by the profile's serial number.
+ */
 final class AccountStore {
-
-    static final long MUTE_FOREVER = -1;
 
     static final class Account {
         String id;
         String name;
-        int color;
         String service;
-        // 0 = not muted, -1 = until unmuted, otherwise a time in milliseconds.
-        long mutedUntil;
+        String pkg;
+        long userSerial;
 
-        boolean isMuted() {
-            return mutedUntil == MUTE_FOREVER || mutedUntil > System.currentTimeMillis();
+        /** Key that matches notifications from the same app copy. */
+        String key() {
+            return key(pkg, userSerial);
         }
 
-        /** WebView profile name: one per account keeps logins separate. */
-        String profile() {
-            return "account_" + id.replaceAll("[^A-Za-z0-9_]", "_");
+        static String key(String pkg, long serial) {
+            return pkg + "|" + serial;
         }
     }
 
@@ -37,12 +38,7 @@ final class AccountStore {
     final List<Account> accounts = new ArrayList<>();
 
     AccountStore(Context context) {
-        prefs = context.getSharedPreferences("chat_manager", Context.MODE_PRIVATE);
-        load();
-    }
-
-    private void load() {
-        accounts.clear();
+        prefs = context.getSharedPreferences("chat_manager_hub", Context.MODE_PRIVATE);
         try {
             JSONArray arr = new JSONArray(prefs.getString("accounts", "[]"));
             for (int i = 0; i < arr.length(); i++) {
@@ -50,9 +46,9 @@ final class AccountStore {
                 Account a = new Account();
                 a.id = o.getString("id");
                 a.name = o.optString("name", "Account");
-                a.color = o.optInt("color", Services.get(o.optString("service")).color);
                 a.service = o.optString("service", "whatsapp");
-                a.mutedUntil = o.optLong("mutedUntil", 0);
+                a.pkg = o.getString("pkg");
+                a.userSerial = o.optLong("userSerial", 0);
                 accounts.add(a);
             }
         } catch (JSONException e) {
@@ -64,46 +60,44 @@ final class AccountStore {
         JSONArray arr = new JSONArray();
         try {
             for (Account a : accounts) {
-                JSONObject o = new JSONObject();
-                o.put("id", a.id);
-                o.put("name", a.name);
-                o.put("color", a.color);
-                o.put("service", a.service);
-                o.put("mutedUntil", a.mutedUntil);
-                arr.put(o);
+                arr.put(new JSONObject()
+                        .put("id", a.id).put("name", a.name).put("service", a.service)
+                        .put("pkg", a.pkg).put("userSerial", a.userSerial));
             }
         } catch (JSONException ignored) {
-            // Values are plain strings and numbers, so this does not happen.
+            // Only plain strings and numbers.
         }
         prefs.edit().putString("accounts", arr.toString()).apply();
     }
 
-    Account find(String id) {
-        for (Account a : accounts) if (a.id.equals(id)) return a;
-        return null;
+    boolean has(String pkg, long serial) {
+        for (Account a : accounts) if (a.pkg.equals(pkg) && a.userSerial == serial) return true;
+        return false;
     }
 
-    Account add(String service, String name) {
+    Account add(String service, String pkg, long serial, String name) {
         Account a = new Account();
         a.id = "acc-" + System.currentTimeMillis() + "-" + accounts.size();
         a.name = name;
         a.service = service;
-        a.color = Services.get(service).color;
+        a.pkg = pkg;
+        a.userSerial = serial;
         accounts.add(a);
         save();
         return a;
     }
 
-    void remove(String id) {
-        accounts.remove(find(id));
+    void remove(Account a) {
+        accounts.remove(a);
         save();
     }
 
-    void move(String id, int toIndex) {
-        Account a = find(id);
-        if (a == null) return;
-        accounts.remove(a);
-        accounts.add(Math.max(0, Math.min(toIndex, accounts.size())), a);
+    void move(Account a, int delta) {
+        int i = accounts.indexOf(a);
+        int j = Math.max(0, Math.min(accounts.size() - 1, i + delta));
+        if (i < 0 || i == j) return;
+        accounts.remove(i);
+        accounts.add(j, a);
         save();
     }
 }
