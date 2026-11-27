@@ -2,7 +2,7 @@
 
 # Chat Manager
 
-A desktop app (Mac and Windows) that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, **Discord**, **Gmail**, **Google Chat**, and **Outlook** at the same time.
+A desktop app (Mac and Windows) and Android app that runs several accounts of **WhatsApp**, **Telegram**, **Microsoft Teams**, **Slack**, **Messenger**, **Facebook**, **Instagram**, **LinkedIn**, **X (Twitter)**, **Discord**, **Gmail**, **Google Chat**, and **Outlook** at the same time.
 Each account runs in its own isolated web session, so logins never mix.
 
 ## Run it
@@ -52,6 +52,25 @@ npm run icon       # re-render build/icon.png and build/icon-win.png
 
 Builds are unsigned. On Mac, right-click the app and choose **Open** the first time.
 On Windows, choose **More info → Run anyway** in SmartScreen.
+
+## Android app
+
+The `android/` folder holds a native Android version (Android 8 and newer) with the same 13 services.
+
+- Account icons run along the top; tap to switch, long-press to rename, mute, reorder, reload, or remove.
+- Each account has its own WebView profile, so logins stay separate.
+- Messages arrive as Android notifications. Incoming calls ring with **Answer** and **Decline** (full screen on the lock screen); Answer opens the account and accepts, Decline rejects without opening the app.
+- A quiet "Chat Manager is running" notification keeps chats connected in the background. Use Back or Home to leave the app; swiping it away from Recent apps stops it.
+- WhatsApp on a phone: in WhatsApp on the phone you want to add, go to **Linked devices → Link a device → Link with phone number instead**, then type the code shown in Chat Manager.
+
+Build it (needs Android Studio's SDK and Java 17):
+
+```bash
+cd android
+gradle assembleRelease   # app/build/outputs/apk/release/app-release.apk
+```
+
+Release builds are signed with the key in `~/.android/chat-manager-release.properties` when it exists (keep that key safe: updates only install over a build signed with the same key), otherwise with the debug key.
 
 ## Disclaimer
 

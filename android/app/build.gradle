@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing: the key lives outside the repo, in
+// ~/.android/chat-manager-release.properties (storeFile, storePassword,
+// keyAlias, keyPassword). Without it, release builds use the debug key.
+def signingProps = new Properties()
+def signingFile = new File(System.getProperty('user.home'), '.android/chat-manager-release.properties')
+if (signingFile.exists()) signingFile.withInputStream { signingProps.load(it) }
+
+android {
+    namespace = 'com.local.chatmanager'
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = 'com.local.chatmanager'
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 10800
+        versionName = '1.8.0'
+    }
+
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile = file(signingProps['storeFile'])
+                storePassword = signingProps['storePassword']
+                keyAlias = signingProps['keyAlias']
+                keyPassword = signingProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            signingConfig = signingFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.15.0'
+}
